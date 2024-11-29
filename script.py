@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import os
+from tkinter import Tk, Label, Button, filedialog, Entry, messagebox
+import getpass
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.padding import PKCS7
 from cryptography.hazmat.backends import default_backend
-from base64 import urlsafe_b64encode, urlsafe_b64decode
-import getpass
 
 # Função para derivar uma chave a partir de uma senha
 def gerar_chave(senha: str, salt: bytes) -> bytes:
@@ -59,7 +59,7 @@ def descriptografar_arquivo(caminho_arquivo: str, chave: bytes):
 
     os.remove(caminho_arquivo)
 
-# Criptografar todos os arquivos em uma pasta
+# Função para criptografar uma pasta
 def criptografar_pasta(caminho_pasta: str, senha: str):
     salt = os.urandom(16)
     chave = gerar_chave(senha, salt)
@@ -74,11 +74,11 @@ def criptografar_pasta(caminho_pasta: str, senha: str):
             caminho_arquivo = os.path.join(raiz, arquivo)
             criptografar_arquivo(caminho_arquivo, chave)
 
-# Descriptografar todos os arquivos em uma pasta
+# Função para descriptografar uma pasta
 def descriptografar_pasta(caminho_pasta: str, senha: str):
     salt_path = os.path.join(caminho_pasta, 'salt.key')
     if not os.path.exists(salt_path):
-        print("Arquivo de salt não encontrado!")
+        messagebox.showerror("Erro", "Arquivo de salt não encontrado!")
         return
 
     with open(salt_path, 'rb') as f:
@@ -93,26 +93,55 @@ def descriptografar_pasta(caminho_pasta: str, senha: str):
             caminho_arquivo = os.path.join(raiz, arquivo)
             descriptografar_arquivo(caminho_arquivo, chave)
 
-# Menu principal
-def main():
-    print("=== Sistema de Criptografia de Arquivos ===")
-    opcao = input("Deseja (C)riptografar ou (D)escriptografar uma pasta? ").lower()
+# Função para selecionar pasta
+def selecionar_pasta():
+    pasta = filedialog.askdirectory()
+    if pasta:
+        entry_pasta.delete(0, "end")
+        entry_pasta.insert(0, pasta)
 
-    caminho_pasta = input("Digite o caminho da pasta: ")
-    if not os.path.isdir(caminho_pasta):
-        print("Caminho inválido!")
+# Função para iniciar criptografia
+def iniciar_criptografia():
+    caminho_pasta = entry_pasta.get()
+    senha = entry_senha.get()
+    if not caminho_pasta or not senha:
+        messagebox.showwarning("Aviso", "Preencha todos os campos!")
         return
 
-    senha = getpass.getpass("Digite a senha: ")
-
-    if opcao == 'c':
+    try:
         criptografar_pasta(caminho_pasta, senha)
-        print("Pasta criptografada com sucesso!")
-    elif opcao == 'd':
-        descriptografar_pasta(caminho_pasta, senha)
-        print("Pasta descriptografada com sucesso!")
-    else:
-        print("Opção inválida!")
+        messagebox.showinfo("Sucesso", "Pasta criptografada com sucesso!")
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao criptografar: {e}")
 
-if __name__ == "__main__":
-    main()
+# Função para iniciar descriptografia
+def iniciar_descriptografia():
+    caminho_pasta = entry_pasta.get()
+    senha = entry_senha.get()
+    if not caminho_pasta or not senha:
+        messagebox.showwarning("Aviso", "Preencha todos os campos!")
+        return
+
+    try:
+        descriptografar_pasta(caminho_pasta, senha)
+        messagebox.showinfo("Sucesso", "Pasta descriptografada com sucesso!")
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao descriptografar: {e}")
+
+# Interface Gráfica
+root = Tk()
+root.title("Criptografia de Arquivos")
+
+Label(root, text="Selecione a pasta:").grid(row=0, column=0, padx=10, pady=10)
+entry_pasta = Entry(root, width=40)
+entry_pasta.grid(row=0, column=1, padx=10, pady=10)
+Button(root, text="Procurar", command=selecionar_pasta).grid(row=0, column=2, padx=10, pady=10)
+
+Label(root, text="Senha:").grid(row=1, column=0, padx=10, pady=10)
+entry_senha = Entry(root, width=40, show="*")
+entry_senha.grid(row=1, column=1, padx=10, pady=10)
+
+Button(root, text="Criptografar", command=iniciar_criptografia, bg="green", fg="white").grid(row=2, column=0, padx=10, pady=20)
+Button(root, text="Descriptografar", command=iniciar_descriptografia, bg="blue", fg="white").grid(row=2, column=1, padx=10, pady=20)
+
+root.mainloop()
